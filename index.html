@@ -1,8 +1,298 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <title>Conference Room Booking</title>
+  <style>
+    body {
+      background-color: #FFFDD0;
+      text-align: center;
+    }
+
+    .room-button {
+      display: inline-block;
+      padding: 10px 20px;
+      font-size: 18px;
+      font-weight: bold;
+      border: 2px solid #000;
+      background-color: #FFF;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    .room-button.selected {
+      background-color: lightgray;
+    }
+
+    .available-rooms {
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .room-boxes {
+      display: flex;
+      justify-content: center;
+    }
+
+    .room-box {
+      display: inline-block;
+      padding: 10px;
+      margin: 10px;
+      border: 2px solid #000;
+      background-color: #FFF;
+      cursor: pointer;
+    }
+
+    .room-box.occupied {
+      background-color: red;
+    }
+
+    .room-box.vacant {
+      background-color: green;
+    }
+
+    .room-box .room-name {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+
+    .room-box .occupancy-status {
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    .room-box .occupant-info {
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .booking-buttons {
+      margin-top: 20px;
+    }
+
+    .booking-buttons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      background-color: #FFF;
+      color: #000;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    .booking-history {
+      display: none;
+      text-align: left;
+      margin-top: 20px;
+    }
+
+    table {
+      margin: 0 auto;
+    }
+  </style>
+</head>
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+  <h1>Conference Room Booking</h1>
+  <p>Please select one of the conference rooms:</p>
+
+  <div class="room-buttons">
+    <button class="room-button" id="new-project-office" onclick="selectRoom('new-project-office')">New Project Office Training Room</button>
+    <button class="room-button" id="rd-conference-room" onclick="selectRoom('rd-conference-room')">R&amp;D Conference Room</button>
+    <button class="room-button" id="main-conference-room" onclick="selectRoom('main-conference-room')">Main Conference Room</button>
+  </div>
+
+  <div class="available-rooms">
+    <p>Number of Available Conference Rooms: <span id="available-rooms-count">3</span></p>
+    <div class="room-boxes">
+      <div class="room-box" id="new-project-office-box" onclick="showOccupant('new-project-office')">
+        <p class="room-name">New Project Office Training Room</p>
+        <div class="occupancy-status"></div>
+        <div class="occupant-info"></div>
+      </div>
+      <div class="room-box" id="rd-conference-room-box" onclick="showOccupant('rd-conference-room')">
+        <p class="room-name">R&amp;D Conference Room</p>
+        <div class="occupancy-status"></div>
+        <div class="occupant-info"></div>
+      </div>
+      <div class="room-box" id="main-conference-room-box" onclick="showOccupant('main-conference-room')">
+        <p class="room-name">Main Conference Room</p>
+        <div class="occupancy-status"></div>
+        <div class="occupant-info"></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Book Conference Room</h2>
+
+  <form id="booking-form">
+    <label for="name">Name:</label>
+    <input type="text" id="name" required><br>
+
+    <label for="phone">Phone Number:</label>
+    <input type="tel" id="phone" pattern="[0-9]{10}" required><br>
+
+    <label for="date">Date:</label>
+    <input type="date" id="date" required><br>
+
+    <label for="start-time">Meeting Start Time:</label>
+    <input type="time" id="start-time" required><br>
+
+    <label for="end-time">Meeting End Time:</label>
+    <input type="time" id="end-time" required><br>
+
+    <input type="submit" value="Book Conference Room">
+  </form>
+
+  <div class="booking-buttons">
+    <button id="show-history" onclick="showHistory()">Show History</button>
+  </div>
+
+  <div class="booking-history">
+    <h2>Booking History</h2>
+    <table id="history-table">
+      <tr>
+        <th>Name</th>
+        <th>Phone Number</th>
+        <th>Date</th>
+        <th>Start Time</th>
+        <th>End Time</th>
+        <th>Duration</th>
+        <th>Room</th>
+      </tr>
+    </table>
+  </div>
+
+  <script>
+    var bookingForm = document.getElementById("booking-form");
+    var historyTable = document.getElementById("history-table");
+    var showHistoryButton = document.getElementById("show-history");
+    var bookingHistory = [];
+    var roomButtons = document.querySelectorAll(".room-button");
+    var roomBoxes = document.querySelectorAll(".room-box");
+    var selectedRoom = "";
+
+    function selectRoom(roomId) {
+      // Deselect previously selected room
+      if (selectedRoom !== "") {
+        document.getElementById(selectedRoom).classList.remove("selected");
+      }
+
+      // Select new room
+      document.getElementById(roomId).classList.add("selected");
+      selectedRoom = roomId;
+    }
+
+    bookingForm.addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      var name = document.getElementById("name").value;
+      var phone = document.getElementById("phone").value;
+      var dateInput = document.getElementById("date");
+      var startTime = document.getElementById("start-time").value;
+      var endTime = document.getElementById("end-time").value;
+
+      var currentDate = new Date();
+      var selectedDate = new Date(dateInput.value);
+      var diffInHours = Math.abs(selectedDate - currentDate) / 3600000;
+
+      if (diffInHours < 48) {
+        var duration = calculateDuration(startTime, endTime);
+        var availableRoomsCount = parseInt(document.getElementById("available-rooms-count").innerText);
+
+        if (availableRoomsCount > 0) {
+          availableRoomsCount--;
+          document.getElementById("available-rooms-count").innerText = availableRoomsCount;
+        }
+
+        var booking = {
+          name: name,
+          phone: phone,
+          date: selectedDate.toDateString(),
+          startTime: startTime,
+          endTime: endTime,
+          duration: duration,
+          room: selectedRoom
+        };
+        bookingHistory.push(booking);
+
+        var newRow = historyTable.insertRow(-1);
+        newRow.insertCell(0).innerText = name;
+        newRow.insertCell(1).innerText = phone;
+        newRow.insertCell(2).innerText = selectedDate.toDateString();
+        newRow.insertCell(3).innerText = startTime;
+        newRow.insertCell(4).innerText = endTime;
+        newRow.insertCell(5).innerText = formatDuration(duration);
+        newRow.insertCell(6).innerText = selectedRoom;
+
+        roomBoxes.forEach(function(box) {
+          if (box.id === selectedRoom + "-box") {
+            box.classList.add("occupied");
+            box.querySelector(".occupancy-status").textContent = "Meeting in progress";
+            box.querySelector(".occupant-info").textContent = "Occupant: " + name + " (" + phone + ")";
+          }
+        });
+
+        bookingForm.reset();
+      } else {
+        alert("You cannot book a room more than 48 hours in advance.");
+      }
+    });
+
+    function calculateDuration(startTime, endTime) {
+      var start = new Date("2000-01-01 " + startTime);
+      var end = new Date("2000-01-01 " + endTime);
+      return Math.floor((end - start) / 1000); // Convert milliseconds to seconds
+    }
+
+    function formatDuration(duration) {
+      var hours = Math.floor(duration / 3600);
+      var minutes = Math.floor((duration % 3600) / 60);
+      var seconds = duration % 60;
+      return hours.toString().padStart(2, "0") + ":" + minutes.toString().padStart(2, "0") + ":" + seconds.toString().padStart(2, "0");
+    }
+
+    function showOccupant(roomId) {
+      var roomBox = document.getElementById(roomId + "-box");
+      var occupantInfo = roomBox.querySelector(".occupant-info");
+      var occupant = getRoomOccupant(roomId);
+
+      if (occupant) {
+        occupantInfo.textContent = "Occupant: " + occupant.name + " (" + occupant.phone + ")";
+      } else {
+        occupantInfo.textContent = "";
+      }
+    }
+
+    function getRoomOccupant(roomId) {
+      var currentTime = new Date();
+
+      for (var i = 0; i < bookingHistory.length; i++) {
+        var booking = bookingHistory[i];
+
+        if (booking.room === roomId) {
+          var bookingStartTime = new Date(booking.date + " " + booking.startTime);
+
+          if (currentTime >= bookingStartTime) {
+            return {
+              name: booking.name,
+              phone: booking.phone
+            };
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function showHistory() {
+      var password = prompt("Please enter the password:");
+      if (password === "123") {
+        document.querySelector(".booking-history").style.display = "block";
+      } else {
+        alert("Incorrect password. Access denied.");
+      }
+    }
+  </script>
 </body>
 </html>
-
